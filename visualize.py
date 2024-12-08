@@ -277,6 +277,21 @@ def update_map(date, price_range, boroughs, property_types, min_beds, min_baths,
         point = clickData['points'][0]
         prop_lat, prop_lon = point['lat'], point['lon']
         
+        for i in range(3):  # Create 3 concentric circles
+            fig.add_trace(go.Scattermapbox(
+                lat=[prop_lat],
+                lon=[prop_lon],
+                mode='markers',
+                marker=dict(
+                    size=20 + (i * 10),  # Increasing sizes
+                    color='rgba(218,31,74,0.6)',
+                    opacity=0.7 - (i * 0.2),  # Decreasing opacity
+                    symbol='circle'
+                ),
+                hoverinfo='skip',
+                name='Selected Property'
+            ))
+
         # Generate circle points
         circle_points = []
         for bearing in range(0, 361, 10):
@@ -332,16 +347,26 @@ def update_map(date, price_range, boroughs, property_types, min_beds, min_baths,
                 name='Subway Stations'
             ))
 
-    fig.update_layout(
-        margin={'r': 0, 't': 0, 'l': 0, 'b': 0},
-        mapbox=dict(
-            center=dict(
-                lat=40.7128,
-                lon=-74.0060
-            )
-        ),
-        showlegend=False
-    )
+        fig.update_layout(
+            mapbox=dict(
+                center=dict(lat=prop_lat, lon=prop_lon),
+                zoom=12  # Closer zoom level
+            ),
+            showlegend=False,
+            margin={'r': 0, 't': 0, 'l': 0, 'b': 0},
+            updatemenus=[{
+                'type': 'buttons',
+                'showactive': False,
+                'buttons': [{
+                    'method': 'animate',
+                    'args': [None, {
+                        'frame': {'duration': 5000, 'redraw': True},
+                        'fromcurrent': True,
+                        'mode': 'immediate'
+                    }]
+                }]
+            }]
+        )
     
     return fig
 
