@@ -5,6 +5,51 @@ from dash import Dash, dcc, html, Input, Output
 import plotly.graph_objects as go
 from math import radians, sin, cos, sqrt, atan2
 
+CONTENT_STYLE = {
+    'margin-left': '2rem',
+    'margin-right': '2rem',
+    'padding': '2rem 1rem',
+    'font-family': 'Arial, sans-serif'
+}
+
+HEADER_STYLE = {
+    'background-color': '#2c3e50',
+    'padding': '1rem',
+    'color': 'white',
+    'margin-bottom': '2rem',
+    'border-radius': '5px',
+    'text-align': 'center'
+}
+
+FILTER_CONTAINER_STYLE = {
+    'padding': '20px',
+    'backgroundColor': '#f8f9fa',
+    'border-radius': '10px',
+    'box-shadow': '0 2px 4px rgba(0,0,0,0.1)',
+    'margin-bottom': '2rem'
+}
+
+FILTER_ITEM_STYLE = {
+    'width': '31%',
+    'display': 'inline-block',
+    'margin': '1%',
+    'padding': '10px'
+}
+
+LABEL_STYLE = {
+    'font-weight': 'bold',
+    'margin-bottom': '8px',
+    'color': '#2c3e50'
+}
+
+DETAILS_SECTION_STYLE = {
+    'marginTop': '20px',
+    'backgroundColor': 'white',
+    'padding': '20px',
+    'border-radius': '10px',
+    'box-shadow': '0 2px 4px rgba(0,0,0,0.1)'
+}
+
 # Load the data
 df = pd.read_csv('./data/prepared-dataset.csv')
 
@@ -13,19 +58,19 @@ app = Dash(__name__)
 
 # Layout
 app.layout = html.Div([
-    html.H1('NYC Real Estate Dashboard'),
+    html.H1('NYC Real Estate Dashboard', style=HEADER_STYLE),
     
     # Filters section
     html.Div([
         html.Div([
-            html.Label('Available From:'),
+            html.Label('Available From:', style=LABEL_STYLE),
             dcc.DatePickerSingle(
                 id='date-picker',
                 min_date_allowed=df['availableFrom'].min(),
                 max_date_allowed=df['availableFrom'].max(),
                 placeholder='Select a date'
             )
-        ], style={'width': '33%', 'display': 'inline-block'}),
+        ], style=FILTER_ITEM_STYLE),
         
         html.Div([
             html.Label('Price Range:'),
@@ -41,7 +86,7 @@ app.layout = html.Div([
                 )},
                 value=[df['price'].min(), df['price'].max()]
             )
-        ], style={'width': '100%', 'marginBottom': '20px'}),
+        ], style=FILTER_ITEM_STYLE),
         
         html.Div([
             html.Label('Borough:'),
@@ -50,7 +95,7 @@ app.layout = html.Div([
                 options=[{'label': i, 'value': i} for i in df['borough'].unique()],
                 multi=True
             )
-        ], style={'width': '33%', 'display': 'inline-block'}),
+        ], style=FILTER_ITEM_STYLE),
         
         html.Div([
             html.Label('Property Type:'),
@@ -59,7 +104,7 @@ app.layout = html.Div([
                 options=[{'label': i, 'value': i} for i in df['propertyType'].unique()],
                 multi=True
             )
-        ], style={'width': '33%', 'display': 'inline-block'}),
+        ], style=FILTER_ITEM_STYLE),
         
         html.Div([
             html.Label('Minimum Beds:'),
@@ -69,7 +114,7 @@ app.layout = html.Div([
                 min=0,
                 step=1
             )
-        ], style={'width': '33%', 'display': 'inline-block'}),
+        ], style=FILTER_ITEM_STYLE),
         
         html.Div([
             html.Label('Minimum Baths:'),
@@ -79,21 +124,21 @@ app.layout = html.Div([
                 min=0,
                 step=0.5
             )
-        ], style={'width': '33%', 'display': 'inline-block'})
-    ], style={'padding': '20px', 'backgroundColor': '#f2f2f2'}),
+        ], style=FILTER_ITEM_STYLE)
+    ], style=FILTER_CONTAINER_STYLE),
     
     # Map
     html.Div([
-        dcc.Graph(id='nyc-map', style={'height': '60vh'})
-    ]),
+        dcc.Graph(id='nyc-map', style={'height': '70vh', 'border-radius': '10px'})
+    ], style={'margin': '2rem 0'}),
     
     # Property Details Sections
     html.Div([
         # Description Section
         html.Div([
-            html.H3('Property Description'),
+            html.H3('Property Description', style={'color': '#2c3e50', 'border-bottom': '2px solid #eee'}),
             html.Div(id='property-description', style={'padding': '10px'})
-        ], style={'marginTop': '20px', 'backgroundColor': '#f8f9fa', 'padding': '15px'}),
+        ], style=DETAILS_SECTION_STYLE),
         
         # Police Precinct Section
         html.Div([
@@ -101,13 +146,13 @@ app.layout = html.Div([
             html.Div([
                 html.Div(id='precinct-details', style={'padding': '10px'})
             ])
-        ], style={'marginTop': '20px', 'backgroundColor': '#f8f9fa', 'padding': '15px'}),
+        ], style=DETAILS_SECTION_STYLE),
         
         # Subway Stations Section
         html.Div([
             html.H3('Nearby Subway Stations'),
             html.Div(id='subway-details', style={'padding': '10px'})
-        ], style={'marginTop': '20px', 'backgroundColor': '#f8f9fa', 'padding': '15px'}),
+        ], style=DETAILS_SECTION_STYLE),
         
         # Census Data Section
         html.Div([
@@ -121,7 +166,7 @@ app.layout = html.Div([
             ])
         ], style={'marginTop': '20px', 'backgroundColor': '#f8f9fa', 'padding': '15px'})
     ], id='property-details', style={'display': 'none'})
-])
+], style=CONTENT_STYLE)
 
 def lat_lon_offset(lat, lon, distance_miles, bearing):
     """
