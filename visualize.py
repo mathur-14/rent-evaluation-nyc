@@ -50,6 +50,19 @@ DETAILS_SECTION_STYLE = {
     'box-shadow': '0 2px 4px rgba(0,0,0,0.1)'
 }
 
+precinct_controls = html.Div([
+    html.Label('Color Precincts by:', style=LABEL_STYLE),
+    dcc.RadioItems(
+        id='precinct-metric',
+        options=[
+            {'label': 'Crime Rate', 'value': 'crime_rate'},
+            {'label': 'Number of Schools', 'value': 'schools_in_precinct'}
+        ],
+        value='crime_rate',
+        style={'margin': '10px 0'}
+    )
+], style=FILTER_CONTAINER_STYLE)
+
 # Load the data
 df = pd.read_csv('./data/prepared-dataset.csv')
 
@@ -59,113 +72,126 @@ app = Dash(__name__)
 # Layout
 app.layout = html.Div([
     html.H1('NYC Real Estate Dashboard', style=HEADER_STYLE),
-    
-    # Filters section
-    html.Div([
-        html.Div([
-            html.Label('Available From:', style=LABEL_STYLE),
-            dcc.DatePickerSingle(
-                id='date-picker',
-                min_date_allowed=df['availableFrom'].min(),
-                max_date_allowed=df['availableFrom'].max(),
-                placeholder='Select a date'
-            )
-        ], style=FILTER_ITEM_STYLE),
-        
-        html.Div([
-            html.Label('Price Range:'),
-            dcc.RangeSlider(
-                id='price-range',
-                min=df['price'].min(),
-                max=df['price'].max(),
-                step=1000,
-                marks={i: f'${i:,}' for i in range(
-                    int(df['price'].min()),
-                    int(df['price'].max()),
-                    int((df['price'].max() - df['price'].min()) / 5)
-                )},
-                value=[df['price'].min(), df['price'].max()]
-            )
-        ], style=FILTER_ITEM_STYLE),
-        
-        html.Div([
-            html.Label('Borough:'),
-            dcc.Dropdown(
-                id='borough-dropdown',
-                options=[{'label': i, 'value': i} for i in df['borough'].unique()],
-                multi=True
-            )
-        ], style=FILTER_ITEM_STYLE),
-        
-        html.Div([
-            html.Label('Property Type:'),
-            dcc.Dropdown(
-                id='property-type-dropdown',
-                options=[{'label': i, 'value': i} for i in df['propertyType'].unique()],
-                multi=True
-            )
-        ], style=FILTER_ITEM_STYLE),
-        
-        html.Div([
-            html.Label('Minimum Beds:'),
-            dcc.Input(
-                id='beds-input',
-                type='number',
-                min=0,
-                step=1
-            )
-        ], style=FILTER_ITEM_STYLE),
-        
-        html.Div([
-            html.Label('Minimum Baths:'),
-            dcc.Input(
-                id='baths-input',
-                type='number',
-                min=0,
-                step=0.5
-            )
-        ], style=FILTER_ITEM_STYLE)
-    ], style=FILTER_CONTAINER_STYLE),
-    
-    # Map
-    html.Div([
-        dcc.Graph(id='nyc-map', style={'height': '70vh', 'border-radius': '10px'})
-    ], style={'margin': '2rem 0'}),
-    
-    # Property Details Sections
-    html.Div([
-        # Description Section
-        html.Div([
-            html.H3('Property Description', style={'color': '#2c3e50', 'border-bottom': '2px solid #eee'}),
-            html.Div(id='property-description', style={'padding': '10px'})
-        ], style=DETAILS_SECTION_STYLE),
-        
-        # Police Precinct Section
-        html.Div([
-            html.H3('Police Precinct Details'),
+    dcc.Tabs([
+        dcc.Tab(label='Properties', children=[
+            # Move all existing layout content here
             html.Div([
-                html.Div(id='precinct-details', style={'padding': '10px'})
-            ])
-        ], style=DETAILS_SECTION_STYLE),
-        
-        # Subway Stations Section
-        html.Div([
-            html.H3('Nearby Subway Stations'),
-            html.Div(id='subway-details', style={'padding': '10px'})
-        ], style=DETAILS_SECTION_STYLE),
-        
-        # Census Data Section
-        html.Div([
-            html.H3('Census Data'),
-            html.Div([
+                # Filters section
                 html.Div([
-                    dcc.Graph(id='population-chart', style={'width': '33%', 'display': 'inline-block'}),
-                    dcc.Graph(id='race-chart', style={'width': '33%', 'display': 'inline-block'}),
-                    dcc.Graph(id='economics-chart', style={'width': '33%', 'display': 'inline-block'})
-                ])
+                    html.Div([
+                        html.Label('Available From:', style=LABEL_STYLE),
+                        dcc.DatePickerSingle(
+                            id='date-picker',
+                            min_date_allowed=df['availableFrom'].min(),
+                            max_date_allowed=df['availableFrom'].max(),
+                            placeholder='Select a date'
+                        )
+                    ], style=FILTER_ITEM_STYLE),
+                    
+                    html.Div([
+                        html.Label('Price Range:'),
+                        dcc.RangeSlider(
+                            id='price-range',
+                            min=df['price'].min(),
+                            max=df['price'].max(),
+                            step=1000,
+                            marks={i: f'${i:,}' for i in range(
+                                int(df['price'].min()),
+                                int(df['price'].max()),
+                                int((df['price'].max() - df['price'].min()) / 5)
+                            )},
+                            value=[df['price'].min(), df['price'].max()]
+                        )
+                    ], style=FILTER_ITEM_STYLE),
+                    
+                    html.Div([
+                        html.Label('Borough:'),
+                        dcc.Dropdown(
+                            id='borough-dropdown',
+                            options=[{'label': i, 'value': i} for i in df['borough'].unique()],
+                            multi=True
+                        )
+                    ], style=FILTER_ITEM_STYLE),
+                    
+                    html.Div([
+                        html.Label('Property Type:'),
+                        dcc.Dropdown(
+                            id='property-type-dropdown',
+                            options=[{'label': i, 'value': i} for i in df['propertyType'].unique()],
+                            multi=True
+                        )
+                    ], style=FILTER_ITEM_STYLE),
+                    
+                    html.Div([
+                        html.Label('Minimum Beds:'),
+                        dcc.Input(
+                            id='beds-input',
+                            type='number',
+                            min=0,
+                            step=1
+                        )
+                    ], style=FILTER_ITEM_STYLE),
+                    
+                    html.Div([
+                        html.Label('Minimum Baths:'),
+                        dcc.Input(
+                            id='baths-input',
+                            type='number',
+                            min=0,
+                            step=0.5
+                        )
+                    ], style=FILTER_ITEM_STYLE)
+                ], style=FILTER_CONTAINER_STYLE),
+                
+                # Map
+                html.Div([
+                    dcc.Graph(id='nyc-map', style={'height': '70vh', 'border-radius': '10px'})
+                ], style={'margin': '2rem 0'}),
+                
+                # Property Details Sections
+                html.Div([
+                    # Description Section
+                    html.Div([
+                        html.H3('Property Description', style={'color': '#2c3e50', 'border-bottom': '2px solid #eee'}),
+                        html.Div(id='property-description', style={'padding': '10px'})
+                    ], style=DETAILS_SECTION_STYLE),
+                    
+                    # Police Precinct Section
+                    html.Div([
+                        html.H3('Police Precinct Details'),
+                        html.Div([
+                            html.Div(id='precinct-details', style={'padding': '10px'})
+                        ])
+                    ], style=DETAILS_SECTION_STYLE),
+                    
+                    # Subway Stations Section
+                    html.Div([
+                        html.H3('Nearby Subway Stations'),
+                        html.Div(id='subway-details', style={'padding': '10px'})
+                    ], style=DETAILS_SECTION_STYLE),
+                    
+                    # Census Data Section
+                    html.Div([
+                        html.H3('Census Data'),
+                        html.Div([
+                            html.Div([
+                                dcc.Graph(id='population-chart', style={'width': '33%', 'display': 'inline-block'}),
+                                dcc.Graph(id='race-chart', style={'width': '33%', 'display': 'inline-block'}),
+                                dcc.Graph(id='economics-chart', style={'width': '33%', 'display': 'inline-block'})
+                            ])
+                        ])
+                    ], style={'marginTop': '20px', 'backgroundColor': '#f8f9fa', 'padding': '15px'})
+                ], id='property-details', style={'display': 'none'})
+
             ])
-        ], style={'marginTop': '20px', 'backgroundColor': '#f8f9fa', 'padding': '15px'})
-    ], id='property-details', style={'display': 'none'})
+        ]),
+        dcc.Tab(label='Precincts', children=[
+            precinct_controls,
+            html.Div([
+                dcc.Graph(id='precinct-map', style={'height': '80vh'})
+            ])
+        ])
+    ]),
 ], style=CONTENT_STYLE)
 
 def lat_lon_offset(lat, lon, distance_miles, bearing):
@@ -224,6 +250,88 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     distance = R * c
     
     return distance
+
+def parse_precinct_geometry(geom_str):
+    """Parse precinct geometry string into coordinates"""
+    try:
+        # Remove MULTIPOLYGON and get the coordinate strings
+        coords_str = geom_str.strip('MULTIPOLYGON ((').strip('))')
+        polygon_strs = coords_str.split(')), ((')
+        
+        # Parse each polygon
+        polygons = []
+        for poly_str in polygon_strs:
+            coords = []
+            # Split into coordinate pairs
+            pairs = poly_str.split(', ')
+            for pair in pairs:
+                if pair:
+                    lon, lat = map(float, pair.strip('()').split())
+                    coords.append([lon, lat])
+            if coords:
+                polygons.append(coords)
+        return polygons
+    except:
+        return None
+
+@app.callback(
+    Output('precinct-map', 'figure'),
+    [Input('precinct-metric', 'value')]
+)
+def update_precinct_map(selected_metric):
+    precinct_df = pd.read_csv('./data/final-precinct-dataset.csv')
+    
+    fig = go.Figure()
+    
+    # Create color scale based on metric
+    values = precinct_df[selected_metric].dropna()
+    min_val = values.min()
+    max_val = values.max()
+    
+    for _, row in precinct_df.iterrows():
+        if pd.isna(row['the_geom']):
+            continue
+            
+        polygons = parse_precinct_geometry(row['the_geom'])
+        if not polygons:
+            continue
+            
+        # Calculate color intensity
+        intensity = (row[selected_metric] - min_val) / (max_val - min_val)
+        
+        for polygon in polygons:
+            fig.add_trace(go.Scattermapbox(
+                lon=[coord[0] for coord in polygon],
+                lat=[coord[1] for coord in polygon],
+                mode='lines',
+                fill='toself',
+                fillcolor=f'rgba(218,31,74,{intensity * 0.8})',
+                line=dict(width=1, color='rgb(70,70,70)'),
+                hovertemplate=(
+                    f"Precinct: {row['Precinct']}<br>" +
+                    f"Crime Rate: {row['crime_rate']:.2f}<br>" +
+                    f"Schools: {row['schools_in_precinct']}"
+                ),
+                showlegend=False
+            ))
+    
+    fig.update_layout(
+        mapbox_style="carto-positron",
+        mapbox=dict(
+            center=dict(lat=40.7128, lon=-74.0060),
+            zoom=10
+        ),
+        margin={'r': 0, 't': 0, 'l': 0, 'b': 0}
+    )
+
+    fig.update_layout(
+        coloraxis_colorbar=dict(
+            title=selected_metric.replace('_', ' ').title(),
+            x=0.9
+        )
+    )
+    
+    return fig
 
 # Update existing callback for map
 @app.callback(
