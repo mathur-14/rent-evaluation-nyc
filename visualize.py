@@ -403,7 +403,7 @@ def update_map(date, price_range, boroughs, property_types, min_beds, min_baths,
         # Generate circle points
         circle_points = []
         for bearing in range(0, 361, 10):
-            circle_lat, circle_lon = lat_lon_offset(prop_lat, prop_lon, 0.6, bearing)
+            circle_lat, circle_lon = lat_lon_offset(prop_lat, prop_lon, 0.3, bearing)
             circle_points.append([circle_lon, circle_lat])
         
         # Add radius circle
@@ -424,7 +424,7 @@ def update_map(date, price_range, boroughs, property_types, min_beds, min_baths,
                 prop_lat, prop_lon,
                 station['stop_lat'], station['stop_lon']
             )
-            if distance <= 0.6:
+            if distance <= 0.3:
                 nearby_stations.append(station)
         
         if nearby_stations:
@@ -486,28 +486,123 @@ def update_map(date, price_range, boroughs, property_types, min_beds, min_baths,
      Output('population-chart', 'figure'),
      Output('race-chart', 'figure'),
      Output('economics-chart', 'figure')],
-    [Input('nyc-map', 'clickData')]
+    [Input('nyc-map', 'clickData'),
+     Input('date-picker', 'date'),
+     Input('price-range', 'value'),
+     Input('borough-dropdown', 'value'),
+     Input('property-type-dropdown', 'value'),
+     Input('beds-input', 'value'),
+     Input('baths-input', 'value')]
 )
-def display_property_details(clickData):
+def display_property_details(clickData, date, price_range, boroughs, property_types, min_beds, min_baths):
     if not clickData:
         return {'display': 'none'}, '', '', '', {}, {}, {}
+
+    # Filter dataframe using the same filters as the map
+    filtered_df = df.copy()
+    if date:
+        filtered_df = filtered_df[filtered_df['availableFrom'] >= date]
+    if price_range:
+        filtered_df = filtered_df[
+            (filtered_df['price'] >= price_range[0]) & 
+            (filtered_df['price'] <= price_range[1])
+        ]
+    if boroughs:
+        filtered_df = filtered_df[filtered_df['borough'].isin(boroughs)]
+    if property_types:
+        filtered_df = filtered_df[filtered_df['propertyType'].isin(property_types)]
+    if min_beds:
+        filtered_df = filtered_df[filtered_df['beds'] >= min_beds]
+    if min_baths:
+        filtered_df = filtered_df[filtered_df['baths'] >= min_baths]
+
+    # Get the clicked property's data using lat/lon for matching
+    point = clickData['points'][0]
+    prop_lat, prop_lon = point['lat'], point['lon']
+    selected_property = filtered_df[
+        (filtered_df['latitude'] == prop_lat) & 
+        (filtered_df['longitude'] == prop_lon)
+    ].iloc[0]
+
+    # Find nearby subway stations
+    nearby_stations = {}
+    for _, station in subway_df.iterrows():
+        distance = calculate_distance(
+            prop_lat, prop_lon,
+            station['stop_lat'], station['stop_lon']
+        )
+        if distance <= 0.3:
+            station_name = station['stop_name']
+            if station_name not in nearby_stations or distance < nearby_stations[station_name]['distance']:
+                nearby_stations[station_name] = {
+                    'name': station_name,
+                    'distance': distance,
+                    'Daytime Routes': station['Daytime Routes']
+                }
+
+    # Sort stations by distance
+    nearby_stations_list = sorted(nearby_stations.values(), key=lambda x: x['distance'])
     
-    # Get the clicked property's data
-    point_index = clickData['points'][0]['pointIndex']
-    selected_property = df.iloc[point_index]
-    
-    # Description
+    # In the display_property_details callback, update the subway_info section:
+    if nearby_stations_list:
+        # Create DataFrame for subway visualization
+        subway_viz_df = pd.DataFrame(nearby_stations_list)
+        # Create subway station graph
+        subway_fig = go.Figure()
+        
+        # Add stations as scatter points
+        subway_fig.add_trace(go.Scatter(
+            x=subway_viz_df['distance'],
+            y=subway_viz_df['name'],
+            mode='markers+text',
+            marker=dict(
+                size=30,
+                color='yellow',
+                line=dict(color='black', width=2)
+            ),
+            text=subway_viz_df['Daytime Routes'],
+            textposition='middle right',
+            hovertemplate=(
+                'Station: %{y}<br>' +
+                'Distance: %{x:.2f} miles<br>' +
+                'Routes: %{text}<br>'
+            )
+        ))
+        
+        # Update layout
+        subway_fig.update_layout(
+            title='Nearby Subway Stations',
+            xaxis_title='Distance (miles)',
+            yaxis_title='Station Name',
+            height=max(300, len(nearby_stations_list) * 40),
+            margin=dict(l=20, r=20, t=40, b=20),
+            plot_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(
+                gridcolor='rgba(128,128,128,0.2)',
+                zerolinecolor='rgba(128,128,128,0.2)'
+            ),
+            yaxis=dict(
+                gridcolor='rgba(128,128,128,0.2)',
+                zerolinecolor='rgba(128,128,128,0.2)'
+            )
+        )
+        
+        # Create the subway info section with both text and graph
+        subway_info = html.Div([
+            html.P(f"Number of nearby stations: {len(nearby_stations_list)}"),
+            dcc.Graph(figure=subway_fig)
+        ])
+    else:
+        subway_info = html.P("No subway stations within 0.3 miles")
+
+    # Create other displays
     description = html.P(selected_property['description'])
     
-    # Precinct Details
     precinct_info = html.Div([
         html.P(f"Precinct: {selected_property['Precinct']}"),
         html.P(f"Schools in Precinct: {selected_property['schools_in_precinct']}")
     ])
-    
-    # Subway Stations
-    subway_info = html.P(selected_property['nearby_subway_stations'])
-    
+
     # Population Chart
     population_fig = px.bar(
         x=['Total', 'Male', 'Female'],
@@ -518,7 +613,7 @@ def display_property_details(clickData):
         ],
         title='Population Distribution'
     )
-    
+
     # Race Distribution Chart
     race_data = {
         'Race': ['White', 'Black', 'Asian', 'Hispanic'],
@@ -535,7 +630,7 @@ def display_property_details(clickData):
         names='Race',
         title='Racial Distribution'
     )
-    
+
     # Economics Chart
     economics_fig = go.Figure()
     economics_fig.add_trace(go.Bar(
@@ -548,7 +643,7 @@ def display_property_details(clickData):
         ]
     ))
     economics_fig.update_layout(title='Economic Indicators')
-    
+
     return (
         {'display': 'block'},
         description,
