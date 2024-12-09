@@ -84,7 +84,7 @@ app.layout = html.Div([
                             id='date-picker',
                             min_date_allowed=df['availableFrom'].min(),
                             max_date_allowed=df['availableFrom'].max(),
-                            placeholder='Select a date'
+                            placeholder='Select date'
                         )
                     ], style=FILTER_ITEM_STYLE),
                     
@@ -611,7 +611,8 @@ def display_property_details(clickData, date, price_range, boroughs, property_ty
             selected_property['Male Population'],
             selected_property['Female Population']
         ],
-        title='Population Distribution'
+        title='Population Distribution',
+        labels={'y': 'Population', 'x': 'Distribution Type'}
     )
 
     # Race Distribution Chart
